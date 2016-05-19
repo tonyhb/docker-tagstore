@@ -1,0 +1,17 @@
+version: "0.1"
+log:
+  level: info
+storage:
+  delete:
+    enabled: true
+  maintenance:
+    readonly:
+      enabled: false
+  filesystem:
+    rootdirectory: /storage
+middleware:
+  repository:
+    - name: metadata
+http:
+  addr: :5000
+  secret: muysecret
