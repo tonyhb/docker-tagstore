@@ -15,6 +15,5 @@ func (repo *WrappedRepository) Manifests(ctx context.Context, options ...distrib
 	return &manifestStore{
 		ctx,
 		repo,
-		true,
 	}, nil
 }

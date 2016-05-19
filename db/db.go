@@ -1,41 +1,29 @@
 package db
 
 import (
-	"fmt"
-
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 )
 
 // i cheated
 
-var manifests = map[digest.Digest]interface{}{}
+var manifests = map[digest.Digest][]byte{}
 
 func init() {
-	manifests = make(map[digest.Digest]interface{})
+	manifests = make(map[digest.Digest][]byte)
 }
 
-func Get(dgst digest.Digest) (distribution.Manifest, error) {
+func Get(dgst digest.Digest) ([]byte, error) {
 	val, ok := manifests[dgst]
 	if !ok {
 		return nil, distribution.ErrManifestBlobUnknown{dgst}
 	}
-	man, ok := val.(distribution.Manifest)
-	if !ok {
-		return nil, fmt.Errorf("manifest not found: %s", dgst)
-	}
-	return man, nil
+	return val, nil
 }
 
-func Put(manifest distribution.Manifest) (digest.Digest, error) {
-	_, hash, err := manifest.Payload()
-	if err != nil {
-		return "", err
-	}
-
-	dgst := digest.FromBytes(hash)
-	manifests[dgst] = manifest
-
+func Put(data []byte) (digest.Digest, error) {
+	dgst := digest.FromBytes(data)
+	manifests[dgst] = data
 	return dgst, nil
 }
 
