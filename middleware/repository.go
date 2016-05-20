@@ -17,3 +17,10 @@ func (repo *WrappedRepository) Manifests(ctx context.Context, options ...distrib
 		repo,
 	}, nil
 }
+
+func (repo *WrappedRepository) Tags(ctx context.Context) distribution.TagService {
+	return &tagStore{
+		ctx,
+		repo,
+	}
+}

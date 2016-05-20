@@ -24,7 +24,7 @@ type manifestStore struct {
 }
 
 func (m *manifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, error) {
-	_, err := db.Get(dgst)
+	_, err := db.DB.Manifests.Get(string(dgst))
 	if _, ok := err.(distribution.ErrManifestBlobUnknown); ok {
 		// TODO: return an ErrManifestUnknownRevision
 		return false, nil
@@ -39,7 +39,7 @@ func (m *manifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, e
 // Note that the middleware itself verifies that the manifest is valid;
 // the storage backend should only marshal and unmarshal into the correct type.
 func (m *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
-	content, err := db.Get(dgst)
+	content, err := db.DB.Manifests.Get(string(dgst))
 	if err != nil {
 		return nil, err
 	}
@@ -101,13 +101,16 @@ func (m *manifestStore) Put(ctx context.Context, manifest distribution.Manifest,
 		return
 	}
 
-	return db.Put(data)
+	dgst := digest.FromBytes(data)
+	err = db.DB.Manifests.Put(string(dgst), data)
+
+	return dgst, err
 }
 
 // Delete removes the manifest specified by the given digest
 func (m *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
-	if _, err := db.Get(dgst); err != nil {
+	if _, err := db.DB.Manifests.Get(string(dgst)); err != nil {
 		return err
 	}
-	return db.Delete(dgst)
+	return db.DB.Manifests.Delete(string(dgst))
 }

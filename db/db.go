@@ -1,33 +1,43 @@
 package db
 
 import (
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/digest"
+	"fmt"
 )
 
 // i cheated
 
-var manifests = map[digest.Digest][]byte{}
+var DB db
 
-func init() {
-	manifests = make(map[digest.Digest][]byte)
+type db struct {
+	Manifests KV
+	Tags      KV
 }
 
-func Get(dgst digest.Digest) ([]byte, error) {
-	val, ok := manifests[dgst]
+func init() {
+	DB = db{
+		Manifests: make(KV),
+		Tags:      make(KV),
+	}
+}
+
+var ErrNotFound = fmt.Errorf("item not found")
+
+type KV map[string][]byte
+
+func (store KV) Get(key string) ([]byte, error) {
+	val, ok := store[key]
 	if !ok {
-		return nil, distribution.ErrManifestBlobUnknown{dgst}
+		return nil, ErrNotFound
 	}
 	return val, nil
 }
 
-func Put(data []byte) (digest.Digest, error) {
-	dgst := digest.FromBytes(data)
-	manifests[dgst] = data
-	return dgst, nil
+func (store KV) Put(key string, data []byte) error {
+	store[key] = data
+	return nil
 }
 
-func Delete(dgst digest.Digest) error {
-	delete(manifests, dgst)
+func (store KV) Delete(key string) error {
+	delete(store, key)
 	return nil
 }
