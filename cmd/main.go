@@ -3,6 +3,7 @@ package main
 import (
 	_ "net/http/pprof"
 
+	"tagstore/db"
 	"tagstore/middleware"
 
 	"github.com/docker/distribution/registry"
@@ -23,6 +24,8 @@ import (
 )
 
 func main() {
+	db := db.NewDB()
+	middleware.RegisterStore(db)
 	repomiddleware.Register("metadata", middleware.InitMiddleware)
 
 	// Compile our own registry with the middleware inside it.

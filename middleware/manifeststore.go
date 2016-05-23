@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"tagstore/db"
-
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
@@ -21,10 +19,11 @@ import (
 type manifestStore struct {
 	ctx        context.Context
 	repository distribution.Repository
+	store      Store
 }
 
 func (m *manifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, error) {
-	_, err := db.DB.Manifests.Get(string(dgst))
+	_, err := m.store.GetManifest(ctx, string(dgst))
 	if _, ok := err.(distribution.ErrManifestBlobUnknown); ok {
 		// TODO: return an ErrManifestUnknownRevision
 		return false, nil
@@ -39,7 +38,7 @@ func (m *manifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, e
 // Note that the middleware itself verifies that the manifest is valid;
 // the storage backend should only marshal and unmarshal into the correct type.
 func (m *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
-	content, err := db.DB.Manifests.Get(string(dgst))
+	content, err := m.store.GetManifest(ctx, string(dgst))
 	if err != nil {
 		return nil, err
 	}
@@ -94,23 +93,21 @@ func (m *manifestStore) Put(ctx context.Context, manifest distribution.Manifest,
 		return
 	}
 
-	// The database needs only store the bytes here; we'll decode into
-	// manifest.Versioned in order to detect the version.
+	// Our storage service needs the digest of the manifest in order to
+	// store the manifest under the correct key.
 	_, data, err := manifest.Payload()
 	if err != nil {
 		return
 	}
-
 	dgst := digest.FromBytes(data)
-	err = db.DB.Manifests.Put(string(dgst), data)
-
+	err = m.store.SetManifest(ctx, string(dgst), manifest)
 	return dgst, err
 }
 
 // Delete removes the manifest specified by the given digest
 func (m *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
-	if _, err := db.DB.Manifests.Get(string(dgst)); err != nil {
+	if _, err := m.store.GetManifest(ctx, string(dgst)); err != nil {
 		return err
 	}
-	return db.DB.Manifests.Delete(string(dgst))
+	return m.store.DeleteManifest(ctx, string(dgst))
 }

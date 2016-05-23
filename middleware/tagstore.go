@@ -1,46 +1,40 @@
 package middleware
 
 import (
-	"tagstore/db"
-
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 )
 
 type tagStore struct {
-	ctx  context.Context
-	repo distribution.Repository
+	ctx   context.Context
+	repo  distribution.Repository
+	store Store
 }
 
 func (t *tagStore) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
-	val, err := db.DB.Tags.Get(tag)
-	if err == db.ErrNotFound {
+	val, err := t.store.GetTag(ctx, tag)
+	if err == ErrNotFound {
 		return distribution.Descriptor{}, distribution.ErrTagUnknown{tag}
 	}
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
-
-	// TODO: should tags store media type for manifests?
-
-	return distribution.Descriptor{
-		Digest: digest.Digest(val),
-	}, nil
+	return val, nil
 }
 
 // Tag associates the tag with the provided descriptor, updating the
 // current association, if needed.
 func (t *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
-	return db.DB.Tags.Put(tag, []byte(desc.Digest))
+	return t.store.SetTag(ctx, tag, desc)
 }
 
 // Untag removes the given tag association
 func (t *tagStore) Untag(ctx context.Context, tag string) error {
-	return db.DB.Tags.Delete(tag)
+	return t.store.DeleteTag(ctx, tag)
 }
 
-// All returns the set of tags managed by this tag service
+// All returns the set of tags for the parent repository, as
+// defined in tagStore.repo
 func (t *tagStore) All(ctx context.Context) ([]string, error) {
 	// TODO: Make KV a tree that allows us to store mucho data
 	return []string{}, nil

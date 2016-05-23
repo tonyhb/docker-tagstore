@@ -1,9 +1,16 @@
 package middleware
 
 import (
+	"fmt"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 )
+
+// registeredStore is the storage implementation used for saving manifests
+// and tags. This is set by calling RegisterStore() before constructing
+// the middleware.
+var registeredStore Store
 
 func InitMiddleware(ctx context.Context, repository distribution.Repository, options map[string]interface{}) (distribution.Repository, error) {
 
@@ -23,8 +30,13 @@ func InitMiddleware(ctx context.Context, repository distribution.Repository, opt
 	//
 	// BUT - is this necessary? a pull-through cache should only pull...
 
+	if registeredStore == nil {
+		return nil, fmt.Errorf("no store has been registered for metadata middleware")
+	}
+
 	return &WrappedRepository{
 		Repository: repository,
+		store:      registeredStore,
 	}, nil
 
 }
